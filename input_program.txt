@@ -1,0 +1,5 @@
+define function greet with name
+    let msg be "Hello";
+    if name is equal to "Bob" then
+        print msg;
+end function
