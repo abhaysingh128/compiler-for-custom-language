@@ -1,0 +1,69 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include "tokens.h"
+#include "ast.h"
+
+extern int yylex();
+extern int yyparse();
+extern int yyerror(const char* s);
+extern FILE* yyin;
+
+ASTNode* root;
+%}
+
+%union {
+    int num;
+    char* str;
+    ASTNode* node;
+}
+
+%token <str> T_ID T_TYPE_NUM T_TYPE_TEXT T_TYPE_BOOL T_STRING
+%token <num> T_NUM
+%token T_LET T_BE T_SET T_IS T_EQ T_IF T_THEN T_ELSE T_PRINT T_SEMI T_COLON
+
+%type <node> stmt stmt_list expr literal
+
+%%
+
+program:
+    stmt_list              { root = $1; print_ast(root, 0); }
+    ;
+
+stmt_list:
+    stmt                   { $$ = $1; }
+    | stmt_list stmt       { $$ = $2; } // keep only last for now
+    ;
+
+stmt:
+    T_LET T_ID T_BE T_TYPE_NUM T_SEMI
+        { $$ = create_var_decl($2, "number"); }
+    | T_SET T_ID T_IS expr T_SEMI
+        { $$ = create_assignment($2, $4); }
+    | T_PRINT expr T_SEMI
+        { $$ = create_print_stmt($2); }
+    | T_IF expr T_THEN stmt T_ELSE stmt
+        { $$ = create_if_stmt($2, $4, $6); }
+    ;
+
+expr:
+    literal
+        { $$ = $1; }
+    | T_ID
+        { $$ = create_identifier($1); }
+    | expr '+' expr
+        { $$ = create_binary_expr($1, '+', $3); }
+    | expr '-' expr
+        { $$ = create_binary_expr($1, '-', $3); }
+    ;
+
+literal:
+    T_NUM                  { $$ = create_literal($1); }
+    ;
+
+%%
+
+int yyerror(const char* s) {
+    fprintf(stderr, "Parser error: %s\n", s);
+    return 1;
+}
